@@ -1,5 +1,30 @@
 const kafka = require('kafka-node');
+const mongoose = require('mongoose');
 
+// Connect to Mongo
+mongoose.connect('mongodb://localhost/test');
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+  console.log("Opening database");
+});
+
+// Generate order model
+const orderSchema = new mongoose.Schema({
+    status: String
+});
+const Order = mongoose.model('Order', orderSchema);
+
+// Initialize producer
+const Producer = kafka.Producer,
+    producerClient = new kafka.Client(),
+    producer = new Producer(producerClient);     
+
+producer.on('error', function (err) {
+    console.log(err);
+});
+
+// Initialize orders consumer
 const Consumer = kafka.Consumer,
     ordersConsumerClient = new kafka.Client(),
     ordersConsumer = new Consumer(
@@ -10,31 +35,7 @@ const Consumer = kafka.Consumer,
         {
             autoCommit: true
         }
-    ),
-    paymentsConsumerClient = new kafka.Client(),
-    paymentsConsumer = new Consumer(
-        paymentsConsumerClient,
-        [
-            { topic: 'payments'}
-        ],
-        {
-            autoCommit: true
-        }
-    ),
-    shippingsConsumerClient = new kafka.Client(),
-    shipmentsConsumer = new Consumer(
-        shippingsConsumerClient,
-        [
-            { topic: 'shipments'}
-        ],
-        {
-            autoCommit: true
-        }
-    );   
-
-const Producer = kafka.Producer,
-    producerClient = new kafka.Client(),
-    producer = new Producer(producerClient);       
+    );
 
 ordersConsumer.on('message', function (message) {
     const value = JSON.parse(message.value);
@@ -43,9 +44,16 @@ ordersConsumer.on('message', function (message) {
     if(type === "order-requested")
     {
         console.log(message);
+
+        const order = new Order({ status: 'Requested' });
+        order.save(function (err, order) {
+            if (err) return console.error(err);
+            console.log("order saved");
+        });
+
         const payloads =  [{ topic: 'orders', messages: '{ "type":"order-validated" }' }]
         producer.send(payloads, function (err, data) {
-            console.log("Producing order-validated:" +data);
+            console.log("Producing order-validated:" + data);
         });
     }
 });
@@ -53,6 +61,18 @@ ordersConsumer.on('message', function (message) {
 ordersConsumer.on('error', function (err) {
     console.log(err);
 });
+
+// Initialize payments consumer
+const paymentsConsumerClient = new kafka.Client(),
+    paymentsConsumer = new Consumer(
+        paymentsConsumerClient,
+        [
+            { topic: 'payments'}
+        ],
+        {
+            autoCommit: true
+        }
+    );
 
 paymentsConsumer.on('message', function (message) {
     const value = JSON.parse(message.value);
@@ -71,6 +91,18 @@ paymentsConsumer.on('message', function (message) {
 paymentsConsumer.on('error', function (err) {
     console.log(err);
 });
+
+// Initialize shipments consumer
+const shipmentsConsumerClient = new kafka.Client(),
+    shipmentsConsumer = new Consumer(
+        shipmentsConsumerClient,
+        [
+            { topic: 'shipments'}
+        ],
+        {
+            autoCommit: true
+        }
+    );   
  
 shipmentsConsumer.on('message', function (message) {
     const value = JSON.parse(message.value);
@@ -89,8 +121,3 @@ shipmentsConsumer.on('message', function (message) {
 shipmentsConsumer.on('error', function (err) {
     console.log(err);
 });
-
-producer.on('error', function (err) {
-    console.log(err);
-});
-
