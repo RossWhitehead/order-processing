@@ -1,19 +1,5 @@
 const kafka = require('kafka-node');
-const mongoose = require('mongoose');
-
-// Connect to Mongo
-mongoose.connect('mongodb://localhost/test');
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-  console.log("Opening database");
-});
-
-// Generate order model
-const orderSchema = new mongoose.Schema({
-    status: String
-});
-const Order = mongoose.model('Order', orderSchema);
+const dataContext = require('./data-context');
 
 // Initialize producer
 const Producer = kafka.Producer,
@@ -45,7 +31,7 @@ ordersConsumer.on('message', function (message) {
     {
         console.log(message);
 
-        const order = new Order({ status: 'Requested' });
+        const order = new dataContext.Order({ status: 'Requested' });
         order.save(function (err, order) {
             if (err) return console.error(err);
             console.log("order saved");
