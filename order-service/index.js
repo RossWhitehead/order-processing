@@ -2,7 +2,7 @@ const kafka = require('kafka-node');
 const mongoose = require('mongoose');
 
 // Connect to Mongo
-mongoose.connect('mongodb://localhost/test');
+mongoose.connect('mongodb://mongo/test');
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {

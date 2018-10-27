@@ -1,0 +1,25 @@
+<html>
+
+<head>
+  <title>Express</title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+
+<body>
+  <h1>Express</h1>
+  <p>Welcome to Express</p>
+  <ul id="messages"></ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+  var socket = io();
+  socket.on('kafka-message', function(msg){
+      console.log(msg);
+      $('#messages').append($('<li>').text(msg));
+    });
+</script>
+
+</body>
+
+</html>
