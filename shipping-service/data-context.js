@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 // Connection URL
 const url = 'mongodb://root:example@localhost/test?authSource=admin';
 
@@ -16,8 +15,10 @@ db.once('open', function() {
 });
 
 // Generate order model
-const orderSchema = new mongoose.Schema({
-    status: String
+const shipmentSchema = new mongoose.Schema({
+  orderId: String,
+  shipmentDate: Date,
+  status: String
 });
 
-module.exports.Order = mongoose.model('Order', orderSchema);
+module.exports.Shipment = mongoose.model('Shipment', shipmentSchema);

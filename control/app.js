@@ -28,6 +28,8 @@ app.use(function(req, res, next){
     next();
   });
 
+app.use(express.static('public'))
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
@@ -37,7 +39,9 @@ const Consumer = kafka.Consumer,
     consumer = new Consumer(
         client,
         [
-            { topic: 'orders'}
+            { topic: 'orders'}, 
+            { topic: 'payments'}, 
+            { topic: 'shipments'} 
         ],
         {
             autoCommit: true
@@ -45,7 +49,7 @@ const Consumer = kafka.Consumer,
     );
 
 consumer.on('message', function (message) {
-    io.emit('kafka-message', message.value);
+    io.emit('kafka-message', message);
 });
 
 module.exports = {app: app, server: server};

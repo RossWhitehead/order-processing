@@ -1,4 +1,5 @@
 const kafka = require('kafka-node');
+const dataContext = require('./data-context');
 
 const Consumer = kafka.Consumer,
     ordersConsumerClient = new kafka.Client(),
@@ -27,13 +28,30 @@ const Producer = kafka.Producer,
     producer = new Producer(producerClient);       
 
 ordersConsumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "order-confirmed")
     {
         console.log(message);
-        const payloads =  [{ topic: 'shipments', messages: '{ "type":"shipment-prepared" }' }]
+
+        const shipment = new dataContext.Shipment({ orderId: value.id, shipmentDate: Date.now(), status: 'Shipped' });
+
+        shipment.save(function (err, shipment) {
+            if (err) return console.error(err);
+            console.log("shipment saved, ", shipment._id);
+        });
+
+        const payloads =  [{ topic: 'shipments', messages: '{ "id":"' + shipment._id + '", "orderId":"'+ value.id + '", "type":"shipment-prepared" }' }]
+ 
         producer.send(payloads, function (err, data) {
             console.log("Producing shipment-prepared:" + data);
         });
@@ -45,13 +63,28 @@ ordersConsumer.on('error', function (err) {
 });
 
 shipmentsConsumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "shipment-prepared")
     {
         console.log(message);
-        const payloads =  [{ topic: 'shipments', messages: '{ "type":"shipment-dispatched" }' }]
+
+        dataContext.Shipment.updateOne({ _id: value.id }, { $set: { status: 'dispatched' }}, function (err) {
+            if (err) return console.error(err);
+            console.log("Shipment updated, ", value.id);
+        });
+
+        const payloads =  [{ topic: 'shipments', messages: '{ "id":"'+ value.id + '", "type":"shipment-dispatched" }' }]
+ 
         producer.send(payloads, function (err, data) {
             console.log("Producing shipment-dispatched:" + data);
         });
@@ -59,7 +92,14 @@ shipmentsConsumer.on('message', function (message) {
     else if(type === "shipment-dispatched")
     {
         console.log(message);
-        const payloads =  [{ topic: 'shipments', messages: '{ "type":"shipment-delivered" }' }]
+
+        dataContext.Shipment.updateOne({ _id: value.id }, { $set: { status: 'delivered' }}, function (err) {
+            if (err) return console.error(err);
+            console.log("Shipment updated, ", value.id);
+        });
+
+        const payloads =  [{ topic: 'shipments', messages: '{ "id":"'+ value.id + '", "type":"shipment-delivered" }' }]
+
         producer.send(payloads, function (err, data) {
             console.log("Producing shipment-delivered:" + data);
         });

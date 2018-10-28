@@ -1,4 +1,5 @@
 const kafka = require('kafka-node');
+const dataContext = require('./data-context');
 
 const Consumer = kafka.Consumer,
     consumerClient = new kafka.Client(),
@@ -17,13 +18,30 @@ const Producer = kafka.Producer,
     producer = new Producer(producerClient);       
 
 consumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "order-validated")
     {
         console.log(message);
-        const payloads =  [{ topic: 'payments', messages: '{ "type":"payment-processed" }' }]
+
+        const payment = new dataContext.Payment({ orderId: value.id, amount: 0.99, status: 'Success' });
+
+        payment.save(function (err, payment) {
+            if (err) return console.error(err);
+            console.log("order saved, ", payment._id);
+        });
+
+        const payloads =  [{ topic: 'payments', messages: '{ "id":"'+ value.id + '", "type":"payment-processed" }' }]
+ 
         producer.send(payloads, function (err, data) {
             console.log("Producing payment-processed:" + data);
         });

@@ -6,19 +6,46 @@
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
-  <ul id="messages"></ul>
+  <h1>Control</h1>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-<script>
-  var socket = io();
-  socket.on('kafka-message', function(msg){
+  <div>
+    <p>Orders:</p>
+    <ul id="order-messages"></ul>
+  </div>
+  <p>Payments:</p>
+  <ul id="payment-messages"></ul>
+  <div>
+    <p>Shipments:</p>
+    <ul id="shipment-messages"></ul>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+  <script>
+    const $messages = $('#messages');
+    const $orderMessages = $('#order-messages');
+    const $paymentMessages = $('#payment-messages');
+    const $shipmentMessages = $('#shipment-messages');
+
+    const socket = io();
+
+    socket.on('kafka-message', function (msg) {
       console.log(msg);
-      $('#messages').append($('<li>').text(msg));
+      switch (msg.topic) {
+        case 'orders':
+          $orderMessages.append($('<li>').text(msg.value));
+          break;
+        case 'payments':
+          $paymentMessages.append($('<li>').text(msg.value));
+          break;
+        case 'shipments':
+          $shipmentMessages.append($('<li>').text(msg.value));
+          break;
+        default:
+          break;
+      }
     });
-</script>
+  </script>
 
 </body>
 

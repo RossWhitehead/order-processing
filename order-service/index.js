@@ -1,22 +1,5 @@
 const kafka = require('kafka-node');
-
-const mongoose = require('mongoose');
-
-// Connect to Mongo
-mongoose.connect('mongodb://mongo/test');
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-  console.log("Opening database");
-});
-
-// Generate order model
-const orderSchema = new mongoose.Schema({
-    status: String
-});
-const Order = mongoose.model('Order', orderSchema);
-
-//const dataContext = require('./data-context');
+const dataContext = require('./data-context');
 
 // Initialize producer
 const Producer = kafka.Producer,
@@ -41,8 +24,16 @@ const Consumer = kafka.Consumer,
     );
 
 ordersConsumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "order-requested")
     {
@@ -51,10 +42,10 @@ ordersConsumer.on('message', function (message) {
         const order = new dataContext.Order({ status: 'Requested' });
         order.save(function (err, order) {
             if (err) return console.error(err);
-            console.log("order saved");
+            console.log("order saved, ", order._id);
         });
 
-        const payloads =  [{ topic: 'orders', messages: '{ "type":"order-validated" }' }]
+        const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ order._id + '", "type":"order-validated" }' }]
         producer.send(payloads, function (err, data) {
             console.log("Producing order-validated:" + data);
         });
@@ -78,15 +69,30 @@ const paymentsConsumerClient = new kafka.Client(),
     );
 
 paymentsConsumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "payment-processed")
     {
         console.log(message);
-        const payloads =  [{ topic: 'orders', messages: '{ "type":"order-confirmed" }' }]
+
+        dataContext.Order.updateOne({ _id: value.id }, { $set: { status: 'confirmed' }}, function (err) {
+            if (err) return console.error(err);
+            console.log("order updated, ", value.id);
+        });
+
+        const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ value.id + '", "type":"order-confirmed" }' }]
+ 
         producer.send(payloads, function (err, data) {
-            console.log("Producing order-confirmed:" +data);
+            console.log("Producing order-confirmed:" + data);
         });
     }
 });
@@ -108,13 +114,28 @@ const shipmentsConsumerClient = new kafka.Client(),
     );   
  
 shipmentsConsumer.on('message', function (message) {
-    const value = JSON.parse(message.value);
-    const type = value.type;
+    let value, type;
+
+    try {
+        value = JSON.parse(message.value);
+      } catch(e) {
+        console.log("Invalid JSON Error:", message.value);
+        return;
+      }
+
+    type = value.type;
 
     if(type === "shipment-delivered")
     {
         console.log(message);
-        const payloads =  [{ topic: 'orders', messages: '{ "type":"order-completed" }' }]
+
+        dataContext.Order.updateOne({ _id: value.id }, { $set: { status: 'completed' }}, function (err) {
+            if (err) return console.error(err);
+            console.log("order updated, ", value.id);
+        });
+
+        const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ value.id + '", "type":"order-completed" }' }]
+
         producer.send(payloads, function (err, data) {
             console.log("Producing order-completed:" +data);
         });
