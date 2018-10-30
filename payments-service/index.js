@@ -31,19 +31,21 @@ consumer.on('message', function (message) {
 
     if(type === "order-validated")
     {
-        console.log(message);
+        console.log('Consuming order-validated event.');
+
+        console.log('Processing payment.');
 
         const payment = new dataContext.Payment({ orderId: value.id, amount: 0.99, status: 'Success' });
 
         payment.save(function (err, payment) {
             if (err) return console.error(err);
-            console.log("order saved, ", payment._id);
+            console.log("Creating payment document ", payment._id);
         });
 
         const payloads =  [{ topic: 'payments', messages: '{ "id":"'+ value.id + '", "type":"payment-processed" }' }]
  
         producer.send(payloads, function (err, data) {
-            console.log("Producing payment-processed:" + data);
+            console.log('Producing payment-processed event.');
         });
     }
 });

@@ -41,19 +41,19 @@ ordersConsumer.on('message', function (message) {
 
     if(type === "order-confirmed")
     {
-        console.log(message);
+        console.log('Consuming order-confirmed event.');
 
         const shipment = new dataContext.Shipment({ orderId: value.id, shipmentDate: Date.now(), status: 'Shipped' });
 
         shipment.save(function (err, shipment) {
             if (err) return console.error(err);
-            console.log("shipment saved, ", shipment._id);
+            console.log("Creating shipment document, ", shipment._id);
         });
 
         const payloads =  [{ topic: 'shipments', messages: '{ "id":"' + shipment._id + '", "orderId":"'+ value.id + '", "type":"shipment-prepared" }' }]
  
         producer.send(payloads, function (err, data) {
-            console.log("Producing shipment-prepared:" + data);
+            console.log('Producing shipment-prepared event.');
         });
     }
 });
@@ -76,32 +76,32 @@ shipmentsConsumer.on('message', function (message) {
 
     if(type === "shipment-prepared")
     {
-        console.log(message);
+        console.log('Consuming shipment-prepared event.');
 
         dataContext.Shipment.updateOne({ _id: value.id }, { $set: { status: 'dispatched' }}, function (err) {
             if (err) return console.error(err);
-            console.log("Shipment updated, ", value.id);
+            console.log("Updating shipment document status to dispatched, ", value.id);
         });
 
         const payloads =  [{ topic: 'shipments', messages: '{ "id":"'+ value.id + '", "type":"shipment-dispatched" }' }]
  
         producer.send(payloads, function (err, data) {
-            console.log("Producing shipment-dispatched:" + data);
+            console.log('Producing shipment-dispatched event.');
         });
     }
     else if(type === "shipment-dispatched")
     {
-        console.log(message);
+        console.log('Consuming shipment-dispatched event.');
 
         dataContext.Shipment.updateOne({ _id: value.id }, { $set: { status: 'delivered' }}, function (err) {
             if (err) return console.error(err);
-            console.log("Shipment updated, ", value.id);
+            console.log("Updating shipment document status to delivered, ", value.id);
         });
 
         const payloads =  [{ topic: 'shipments', messages: '{ "id":"'+ value.id + '", "type":"shipment-delivered" }' }]
 
         producer.send(payloads, function (err, data) {
-            console.log("Producing shipment-delivered:" + data);
+            console.log('Producing shipment-delivered event.');
         });
     }
 });
