@@ -91,17 +91,17 @@ paymentsConsumer.on('message', function (message) {
 
     if(type === "payment-processed")
     {
-        console.log(message);
+        console.log('Consuming payment-processed event.');
 
         dataContext.Order.updateOne({ _id: value.id }, { $set: { status: 'confirmed' }}, function (err) {
             if (err) return console.error(err);
-            console.log("order updated, ", value.id);
+            console.log("Updating order document status to confirmed, ", value.id);
         });
 
         const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ value.id + '", "type":"order-confirmed" }' }]
  
         producer.send(payloads, function (err, data) {
-            console.log("Producing order-confirmed:" + data);
+            console.log('Producing order-confirmed event.');
         });
     }
 });
@@ -136,17 +136,17 @@ shipmentsConsumer.on('message', function (message) {
 
     if(type === "shipment-delivered")
     {
-        console.log(message);
+        console.log('Consuming shipment-delivered event.');
 
         dataContext.Order.updateOne({ _id: value.id }, { $set: { status: 'completed' }}, function (err) {
             if (err) return console.error(err);
-            console.log("order updated, ", value.id);
+            console.log("Updated order document status to completed, ", value.id);
         });
 
         const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ value.id + '", "type":"order-completed" }' }]
 
         producer.send(payloads, function (err, data) {
-            console.log("Producing order-completed:" +data);
+            console.log('Producing order-completed event.');
         });
     }
 });
