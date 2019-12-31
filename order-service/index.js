@@ -35,20 +35,29 @@ ordersConsumer.on('message', function (message) {
 
     type = value.type;
 
-    if(type === "order-requested")
-    {
+    if(type === "order-requested") {
         console.log(message);
 
-        const order = new dataContext.Order({ status: 'Requested' });
-        order.save(function (err, order) {
-            if (err) return console.error(err);
-            console.log("order saved, ", order._id);
-        });
+        // Validate order
+        // - products are in product catelog
+        // - prices are correct
 
-        const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ order._id + '", "type":"order-validated" }' }]
-        producer.send(payloads, function (err, data) {
-            console.log("Producing order-validated:" + data);
-        });
+        const valid = true;
+
+        if (valid) {
+            const order = new dataContext.Order({ status: 'Valid' });
+            order.save(function (err, order) {
+                if (err) return console.error(err);
+                console.log("order saved, ", order._id);
+            });
+    
+            const payloads =  [{ topic: 'orders', messages: '{ "id":"'+ order._id + '", "type":"order-validated" }' }]
+            producer.send(payloads, function (err, data) {
+                console.log("Producing order-validated:" + data);
+            });
+        } else {
+            // Invalid
+        }    
     }
 });
 

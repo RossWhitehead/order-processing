@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+  svg(class='chart')
+
+  script(src='//d3js.org/d3.v3.min.js')
+  script(src='javascripts/index.js')
+
